@@ -36,6 +36,41 @@ const createPost = async (req, res) => {
 };
 
 
+const updatePost = async (req, res) => {
+  const { postId, newContent } = req.body;
+  const accessToken = process.env.LINKEDIN_ACCESS_TOKEN;
+
+  // Step 1: Remove "urn:li:share:" if included
+  const idOnly = postId.replace("urn:li:share:", "");
+
+  try {
+    // Step 2: Delete existing post
+    await axios.delete(`${process.env.LINKEDIN_API_URL}/shares/${idOnly}`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    // Step 3: Create new post with newContent
+    const result = await linkedinService.createPost(newContent, false); // false = user post
+
+    res.json({
+      success: true,
+      message: "Post updated (old one deleted, new one created)",
+      linkedInId: result.linkedInId
+    });
+  } catch (error) {
+    console.error("Update Post Error:", error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: {
+        type: "SERVER_ERROR",
+        message: "Failed to update the LinkedIn post"
+      }
+    });
+  }
+};
+
+
+
 
 /**
  * @desc Delete a LinkedIn post by its ID
@@ -95,5 +130,6 @@ const deletePost = async (req, res) => {
 
 module.exports = {
   createPost,
+  updatePost,  
   deletePost,
 };

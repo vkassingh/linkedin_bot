@@ -69,9 +69,6 @@ const updatePost = async (req, res) => {
   }
 };
 
-
-
-
 /**
  * @desc Delete a LinkedIn post by its ID
  * @route DELETE /api/post/:postId
@@ -126,7 +123,6 @@ const deletePost = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   createPost,

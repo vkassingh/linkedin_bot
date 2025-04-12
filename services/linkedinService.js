@@ -16,7 +16,6 @@ const api = axios.create({
   }
 });
 
-
 // Build the payload for a LinkedIn UGC/ (User generated content) post
 
 /**
@@ -45,7 +44,6 @@ module.exports = {
    
   // Create a LinkedIn post (UGC - User Generated Content)
  
-
   /**
    * Publishes a LinkedIn post (text only for now).
    * @param {string} content - The post text
@@ -106,7 +104,6 @@ module.exports = {
       }
     },
   
-
   // ======================================
   // Delete a LinkedIn post (UGC or Share)
   // ======================================

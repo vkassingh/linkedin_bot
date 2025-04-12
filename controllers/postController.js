@@ -35,7 +35,7 @@ const createPost = async (req, res) => {
   }
 };
 
-
+//Update contentPost on Linkedin
 const updatePost = async (req, res) => {
   const { postId, newContent } = req.body;
   const accessToken = process.env.LINKEDIN_ACCESS_TOKEN;

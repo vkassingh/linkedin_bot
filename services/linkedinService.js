@@ -78,6 +78,7 @@ module.exports = {
     }
   },
 
+  //Update contentPost on Linkedin
     /**
    * Updates a LinkedIn post by deleting the old one and creating a new one.
    * @param {string} postId - The URN of the existing post to update

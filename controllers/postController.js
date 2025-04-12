@@ -35,6 +35,65 @@ const createPost = async (req, res) => {
   }
 };
 
+const getAllPosts = async (req, res) => {
+  try {
+    // Fetch all posts using the model method
+    const posts = await Post.find(); // This retrieves all posts in the database
+
+    console.log("Fetched posts:", posts); // Log the posts for debugging
+
+    // Check if no posts are found
+    if (posts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No posts available'
+      });
+    }
+
+    // Respond with the posts
+    res.status(200).json({
+      success: true,
+      message: 'Posts fetched successfully',
+      posts
+    });
+
+  } catch (error) {
+    console.error("Error in getAllPosts:", error);
+    // Handle any errors during the fetching process
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch posts',
+      error: error.message
+    });
+  }
+};
+
+const getPostById = async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      post
+    });
+
+  } catch (error) {
+    console.error("Error fetching post by ID:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch post',
+      error: error.message
+    });
+  }
+};
 
 
 /**
@@ -92,8 +151,9 @@ const deletePost = async (req, res) => {
   }
 };
 
-
 module.exports = {
   createPost,
   deletePost,
+  getAllPosts,
+  getPostById
 };

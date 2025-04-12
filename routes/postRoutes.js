@@ -9,6 +9,13 @@ router.post('/', postController.createPost);
 //Update contentPost on Linkedin
 router.put("/", postController.updatePost);
 
+
+
+
+
+
+
+
 // Delete a post
 router.delete('/:postId', postController.deletePost);
 

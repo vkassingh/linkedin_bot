@@ -78,6 +78,34 @@ module.exports = {
     }
   },
 
+   //Update contentPost on Linkedin
+    /**
+   * Updates a LinkedIn post by deleting the old one and creating a new one.
+   * @param {string} postId - The URN of the existing post to update
+   * @param {string} newContent - The new content for the post
+   * @param {boolean} isCompanyPost - Whether the post is from a company
+   * @returns {Promise<{success: boolean, message: string, newPostId?: string}>}
+   */
+    async updatePost(postId, newContent, isCompanyPost = true) {
+      try {
+        // Step 1: Delete the existing post
+        const deleteResult = await this.deletePost(postId);
+        console.log('Deleted old post:', deleteResult.message);
+  
+        // Step 2: Create the new post with updated content
+        const newPost = await this.createPost(newContent, isCompanyPost);
+  
+        return {
+          success: true,
+          message: 'Post updated successfully by deleting and recreating',
+          newPostId: newPost.linkedInId
+        };
+      } catch (error) {
+        console.error('Update failed:', error.response?.data || error.message);
+        throw new Error(error.response?.data?.message || 'Failed to update the LinkedIn post');
+      }
+    },
+
   // ======================================
   // Delete a LinkedIn post (UGC or Share)
   // ======================================

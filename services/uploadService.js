@@ -1,32 +1,32 @@
 const axios = require('axios');
-require('dotenv').config();
+const FormData = require('form-data');
 
-const LINKEDIN_API_URL = process.env.LINKEDIN_API_URL;
+const LINKEDIN_API_URL = 'https://api.linkedin.com/v2';
 const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
-const LINKEDIN_COMPANY_ID = process.env.LINKEDIN_COMPANY_ID;
+const LINKEDIN_USER_ID = process.env.LINKEDIN_USER_ID;
 
-// Register LinkedIn upload and return asset URN and upload URL
 async function registerUpload(type) {
-  const recipe = type === 'image'
-    ? 'urn:li:digitalmediaRecipe:feedshare-image'
-    : 'urn:li:digitalmediaRecipe:feedshare-video';
+  const owner = `urn:li:person:${LINKEDIN_USER_ID}`;
 
-  const body = {
+  const recipe = type === 'video'
+    ? 'urn:li:digitalmediaRecipe:feedshare-video'
+    : 'urn:li:digitalmediaRecipe:feedshare-image';
+
+  const registerBody = {
     registerUploadRequest: {
-      owner: `urn:li:organization:${LINKEDIN_COMPANY_ID}`,
+      owner,
       recipes: [recipe],
-      serviceRelationships: [
-        {
-          relationshipType: 'OWNER',
-          identifier: 'urn:li:userGeneratedContent'
-        }
-      ]
+      serviceRelationships: [{
+        identifier: 'urn:li:userGeneratedContent',
+        relationshipType: 'OWNER'
+      }],
+      supportedUploadMechanism: ['SYNCHRONOUS_UPLOAD']
     }
   };
 
-  const res = await axios.post(
+  const response = await axios.post(
     `${LINKEDIN_API_URL}/assets?action=registerUpload`,
-    body,
+    registerBody,
     {
       headers: {
         Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
@@ -35,38 +35,44 @@ async function registerUpload(type) {
     }
   );
 
-  return res.data.value;
+  const value = response.data.value;
+  const uploadMechanism = value.uploadMechanism;
+  const asset = value.asset;
+
+  return { uploadMechanism, asset };
 }
 
-// Upload binary file to LinkedIn upload URL
 async function uploadMedia(uploadUrl, mediaBuffer, contentType) {
-  await axios.put(uploadUrl, mediaBuffer, {
+  const res = await axios.put(uploadUrl, mediaBuffer, {
     headers: {
-      Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
-      'Content-Type': contentType
+      'Authorization': undefined, // Must be omitted for LinkedIn upload
+      'Content-Type': contentType,
+      'Content-Length': mediaBuffer.length
     }
   });
+
+  return res.status === 201 || res.status === 200;
 }
 
-// Create LinkedIn post using media asset
 async function createPost(type, text, assetUrn) {
-  const owner = `urn:li:organization:${LINKEDIN_COMPANY_ID}`;
+  const owner = `urn:li:person:${LINKEDIN_USER_ID}`;
 
   const postBody = {
     author: owner,
     lifecycleState: 'PUBLISHED',
     specificContent: {
       'com.linkedin.ugc.ShareContent': {
-        shareCommentary: { text },
-        shareMediaCategory: type.toUpperCase(), // 'IMAGE' or 'VIDEO'
-        // ✅ NEW (fixed)
-media: [{
-  status: 'READY',
-  media: assetUrn,  // ← this is the URN you got from registerUpload()
-  title: { text: 'Some Title' },
-  description: { text }
-}]
-
+        shareCommentary: {
+          text: text
+        },
+        shareMediaCategory: type.toUpperCase(),
+        media: [
+          {
+            status: 'READY',
+            media: assetUrn,
+            mediaType: type.toUpperCase()
+          }
+        ]
       }
     },
     visibility: {
@@ -88,24 +94,27 @@ media: [{
   return response.data;
 }
 
-// Wrapper that does full media posting flow
-async function handleMediaPost({ imgURL, videoURL, type, text }) {
-  const mediaURL = type === 'image' ? imgURL : videoURL;
-  const contentType = type === 'image' ? 'image/jpeg' : 'video/mp4';
+async function handleMediaPost({ url, type, text }) {
+  // Step 1: Download media (image/video) from Cloudinary
+  const mediaRes = await axios.get(url, {
+    responseType: 'arraybuffer'
+  });
 
-  const mediaResponse = await axios.get(mediaURL, { responseType: 'arraybuffer' });
+  const mediaBuffer = Buffer.from(mediaRes.data);
+  const contentType = mediaRes.headers['content-type']; // dynamic detection
 
+  // Step 2: Register LinkedIn upload
   const { uploadMechanism, asset } = await registerUpload(type);
   const uploadUrl = uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
 
-  await uploadMedia(uploadUrl, mediaResponse.data, contentType);
+  // Step 3: Upload media to LinkedIn
+  await uploadMedia(uploadUrl, mediaBuffer, contentType);
 
-  const postResult = await createPost(type, text, asset);
-
-  return postResult;
+  // Step 4: Create LinkedIn post using uploaded asset URN
+  const post = await createPost(type, text, asset);
+  return post;
 }
 
 module.exports = {
   handleMediaPost
 };
-
